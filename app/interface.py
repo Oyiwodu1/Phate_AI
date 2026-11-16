@@ -27,6 +27,7 @@ def send_message(e, message_input, messages, messages_column):
         message_input.value = "" 
         message_input.update()
         response = get_response(messages[-1])
+        messages.append(response)
         echo_message(response, messages_column)
 
 
@@ -51,7 +52,26 @@ def echo_message(message, messages_column):
     )
     messages_column.update()
 
-def new_chat(e, messages, messages_column):
+def update_history(chat_history, history_column):
+    history_column.controls.clear()
+
+    for conversation in chat_history:
+        history_column.controls.append(
+            ft.Text(
+                conversation["title"],
+                color="#F5EEE5"
+            )
+        )
+
+    history_column.update()
+
+def new_chat(e, messages, chat_history, messages_column, history_column):
+    if messages:
+        chat_history.append({
+            "title": messages[0],
+            "messages": messages.copy()
+        })
+    update_history(chat_history, history_column)
     messages.clear()
     messages_column.controls.clear()
     echo_message("Hello! I'm Echo. How can I help you?", messages_column)
@@ -75,6 +95,11 @@ def main(page: ft.Page):
 
 
     messages = []
+    chat_history = []
+    history_column = ft.Column(
+        controls=[],
+        spacing=8
+    )
     messages_column = ft.Column(
         controls=[],
         scroll=ft.ScrollMode.AUTO,
@@ -103,11 +128,12 @@ def main(page: ft.Page):
                 content="+ New Chat",
                 bgcolor="#6B352A",
                 color="#FFF1A6",
-                on_click=lambda e: new_chat(e, messages, messages_column),
+                on_click=lambda e: new_chat(e, messages, chat_history, messages_column, history_column),
             ),
 
             ft.Text("WORKSPACE", color="#D9C6B5"),
             ft.Text("Chat History", color="#F5EEE5"),
+            history_column,
             ft.Text("Projects", color="#F5EEE5"),
             ft.Text("Tasks", color="#F5EEE5"),
 
