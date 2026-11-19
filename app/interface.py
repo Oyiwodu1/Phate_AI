@@ -1,29 +1,34 @@
 from services.assistant import get_response
 import flet as ft
 
+def display_user_message(message, messages_column):
+    messages_column.controls.append(
+        ft.Row(
+            controls=[
+                ft.Container(
+                    content=ft.Text(
+                        message,
+                        color="#FFFFFF",
+                        size=16,
+                        weight=ft.FontWeight.W_500
+                    ),
+                    bgcolor="#51403A",
+                    padding=15,
+                    border_radius=12,
+                )
+            ],
+            alignment=ft.MainAxisAlignment.END,
+            expand=True
+        )
+    )
+    messages_column.update()
+
+
+
 def send_message(e, message_input, messages, messages_column):
     if message_input.value.strip():
         messages.append(message_input.value)
-        messages_column.controls.append(
-            ft.Row(
-                controls=[
-                    ft.Container(
-                        content=ft.Text(
-                            message_input.value,
-                            color="#FFFFFF",
-                            size=16,
-                            weight=ft.FontWeight.W_500
-                        ),
-                        bgcolor="#51403A",
-                        padding=15,
-                        border_radius=12,
-                    )
-                ],
-                alignment=ft.MainAxisAlignment.END,
-                expand=True
-            )
-        )
-        messages_column.update()
+        display_user_message(message_input.value, messages_column)
         message_input.value = "" 
         message_input.update()
         response = get_response(messages[-1])
@@ -52,30 +57,59 @@ def echo_message(message, messages_column):
     )
     messages_column.update()
 
-def update_history(chat_history, history_column):
+def update_history(chat_history, history_column, messages, messages_column, active_chat_index):
     history_column.controls.clear()
 
-    for conversation in chat_history:
+    for index, conversation in enumerate(chat_history):
         history_column.controls.append(
-            ft.Text(
-                conversation["title"],
-                color="#F5EEE5"
+            ft.Button(
+                content=conversation["title"],
+                on_click=lambda e, index=index: load_chat(
+                    e, index, chat_history, messages, messages_column, active_chat_index
+                )
             )
         )
 
     history_column.update()
-
-def new_chat(e, messages, chat_history, messages_column, history_column):
+def new_chat(e, messages, chat_history, messages_column, history_column, active_chat_index, message_input):    
     if messages:
-        chat_history.append({
-            "title": messages[0],
-            "messages": messages.copy()
-        })
-    update_history(chat_history, history_column)
+        if active_chat_index [0] is None:
+            chat_history.append({
+                "title": messages[0],
+                "messages": messages.copy()
+            })
+        else:
+            chat_history[active_chat_index[0]] = {
+                "title": messages[0],
+                "messages": messages.copy()
+            }
+    update_history(chat_history, history_column, messages, messages_column, active_chat_index)
+    active_chat_index[0] = None
     messages.clear()
+    message_input.value = ""
+    message_input.update()
     messages_column.controls.clear()
     echo_message("Hello! I'm Echo. How can I help you?", messages_column)
-   
+
+def load_chat(e, index, chat_history, messages, messages_column, active_chat_index):
+    if active_chat_index[0] is not None:
+        chat_history[active_chat_index[0]] = {
+        "title": messages[0],
+        "messages": messages.copy()
+        }
+    conversation = chat_history[index]
+    active_chat_index[0] = index
+    messages.clear()
+    messages.extend(conversation["messages"])
+    messages_column.controls.clear()
+    
+    for each_index, message in enumerate(messages):
+        if each_index % 2 == 0:
+            display_user_message(message, messages_column)
+        else:
+            echo_message(message, messages_column)
+
+
 def main(page: ft.Page):
     page.title = "Echo"
     page.window.width = 1100
@@ -96,6 +130,7 @@ def main(page: ft.Page):
 
     messages = []
     chat_history = []
+    active_chat_index = [None]
     history_column = ft.Column(
         controls=[],
         spacing=8
@@ -128,7 +163,7 @@ def main(page: ft.Page):
                 content="+ New Chat",
                 bgcolor="#6B352A",
                 color="#FFF1A6",
-                on_click=lambda e: new_chat(e, messages, chat_history, messages_column, history_column),
+                on_click=lambda e: new_chat(e, messages, chat_history, messages_column, history_column, active_chat_index, message_input),
             ),
 
             ft.Text("WORKSPACE", color="#D9C6B5"),
